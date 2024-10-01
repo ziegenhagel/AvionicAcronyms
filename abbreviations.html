@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AvionicAcronyms</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --button-bg: #1c1c1e;
+            --button-text: #ffffff;
+            --correct-color: #34c759;
+            --incorrect-color: #ff3b30;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: calc( 100vh - 80px );
+            display: flex;
+            flex-direction: column;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: var(--button-bg);
+            border: none;
+            color: var(--button-text);
+            padding: 16px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 17px;
+            margin: 8px 0;
+            cursor: pointer;
+            border-radius: 10px;
+            width: 100%;
+            transition: background-color 0.3s;
+            font-weight: 600;
+        }
+        button:active {
+            opacity: 0.8;
+        }
+        #flashcard {
+            padding: 20px;
+            margin: 20px 0;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 38px;
+            font-weight: 700;
+            min-height: 200px;
+        }
+        .category {
+            font-size: 16px;
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+        #categoryFilter {
+            margin: 20px 0;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 17px;
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: none;
+            border-radius: 10px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        #performance {
+            display: none;
+            flex-direction: row;
+			gap: 10px;
+            justify-content: space-between;
+        }
+        #correct, #incorrect {
+            flex: 1;
+            background-color: var(--button-bg);
+            font-weight: bold;
+        }
+        #correct {
+            color: var(--correct-color);
+        }
+        #incorrect {
+            color: var(--incorrect-color);
+        }
+        .topnav {
+			position: fixed;
+			top:0;
+            display: none;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .chevron-left {
+            font-size: 34px;
+            cursor: pointer;
+        }
+        .main-screen {
+            display: flex;
+            flex-direction: column;
+        }
+        .learning-screen {
+            display: none;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="topnav">
+            <span class="chevron-left" onclick="exitLearningMode()">&#8249;</span>
+        </div>
+        <div class="main-screen" style="display:flex;justify-content:center;height:80vh">
+			<img src=a330.png style="margin:3em;max-width:80%">
+            <h1>A330 Abkürzungen</h1>
+            <div id="categoryFilter">
+                <select id="category"></select>
+            </div>
+            <button id="startSession">Lernsitzung starten</button>
+        </div>
+        <div class="learning-screen">
+            <div id="flashcard"></div>
+            <button id="showAnswer">Antwort zeigen</button>
+            <div id="performance">
+                <button id="correct">✓ Richtig</button>
+                <button id="incorrect">✗ Falsch</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+const aviationAbbreviations = [
+	
+	 // Overhead Panel
+  { abbreviation: "ADIRU", meaning: "Air Data Inertial Reference Unit", category: "Navigation" },
+  { abbreviation: "APU GEN", meaning: "Auxiliary Power Unit Generator", category: "Elektrik" },
+  { abbreviation: "BATT", meaning: "Battery", category: "Elektrik" },
+  { abbreviation: "BUS TIE", meaning: "Bus Tie", category: "Elektrik" },
+  { abbreviation: "CAB PRESS", meaning: "Cabin Pressure", category: "Flugzeugsysteme" },
+  { abbreviation: "CARGO SMOKE", meaning: "Cargo Smoke Detection", category: "Sicherheitssysteme" },
+  { abbreviation: "EMER ELEC PWR", meaning: "Emergency Electrical Power", category: "Elektrik" },
+  { abbreviation: "ENG FIRE", meaning: "Engine Fire", category: "Sicherheitssysteme" },
+  { abbreviation: "EXT LT", meaning: "External Lights", category: "Flugzeugsysteme" },
+  { abbreviation: "FUEL PUMP", meaning: "Fuel Pump", category: "Treibstoffsystem" },
+  { abbreviation: "GEN", meaning: "Generator", category: "Elektrik" },
+  { abbreviation: "HYD PUMP", meaning: "Hydraulic Pump", category: "Flugzeugsysteme" },
+  { abbreviation: "INT LT", meaning: "Internal Lights", category: "Flugzeugsysteme" },
+  { abbreviation: "PACK", meaning: "Air Conditioning Pack", category: "Flugzeugsysteme" },
+  { abbreviation: "PROBE HEAT", meaning: "Probe Heating", category: "Flugzeugsysteme" },
+  { abbreviation: "RAT MAN", meaning: "Ram Air Turbine Manual Deploy", category: "Flugzeugsysteme" },
+  { abbreviation: "WIPER", meaning: "Windshield Wiper", category: "Flugzeugsysteme" },
+  { abbreviation: "XBLEED", meaning: "Cross Bleed", category: "Flugzeugsysteme" },
+
+  // PFD (Primary Flight Display)
+  { abbreviation: "ADI", meaning: "Attitude Director Indicator", category: "Fluginstrumente" },
+  { abbreviation: "ALT", meaning: "Altitude", category: "Navigation" },
+  { abbreviation: "AP", meaning: "Autopilot", category: "Flugsteuerung" },
+  { abbreviation: "AT", meaning: "Autothrust", category: "Flugsteuerung" },
+  { abbreviation: "BARO", meaning: "Barometric Pressure Setting", category: "Navigation" },
+  { abbreviation: "DH", meaning: "Decision Height", category: "Navigation" },
+  { abbreviation: "FD", meaning: "Flight Director", category: "Flugsteuerung" },
+  { abbreviation: "FMA", meaning: "Flight Mode Annunciator", category: "Cockpit-Systeme" },
+  { abbreviation: "FPV", meaning: "Flight Path Vector", category: "Navigation" },
+  { abbreviation: "G/S", meaning: "Glideslope", category: "Navigation" },
+  { abbreviation: "HDG", meaning: "Heading", category: "Navigation" },
+  { abbreviation: "ILS", meaning: "Instrument Landing System", category: "Navigation" },
+  { abbreviation: "LOC", meaning: "Localizer", category: "Navigation" },
+  { abbreviation: "MA", meaning: "Missed Approach", category: "Flugverfahren" },
+  { abbreviation: "RADALT", meaning: "Radio Altimeter", category: "Navigation" },
+  { abbreviation: "SPD", meaning: "Speed", category: "Navigation" },
+  { abbreviation: "TCAS", meaning: "Traffic Collision Avoidance System", category: "Sicherheitssysteme" },
+  { abbreviation: "V/S", meaning: "Vertical Speed", category: "Navigation" },
+  { abbreviation: "VOR", meaning: "VHF Omnidirectional Range", category: "Navigation" },
+
+  // MCDU (Multipurpose Control Display Unit)
+  { abbreviation: "ACARS", meaning: "Aircraft Communications Addressing and Reporting System", category: "Kommunikation" },
+  { abbreviation: "ALTN", meaning: "Alternate", category: "Navigation" },
+  { abbreviation: "AOC", meaning: "Airline Operational Control", category: "Flugbetrieb" },
+  { abbreviation: "ATSU", meaning: "Air Traffic Services Unit", category: "Kommunikation" },
+  { abbreviation: "CI", meaning: "Cost Index", category: "Flugplanung" },
+  { abbreviation: "DIR TO", meaning: "Direct To", category: "Navigation" },
+  { abbreviation: "DISC", meaning: "Discontinuity", category: "Navigation" },
+  { abbreviation: "DTG", meaning: "Distance To Go", category: "Navigation" },
+  { abbreviation: "ETA", meaning: "Estimated Time of Arrival", category: "Navigation" },
+  { abbreviation: "F-PLN", meaning: "Flight Plan", category: "Navigation" },
+  { abbreviation: "FPLN", meaning: "Flight Plan", category: "Navigation" },
+  { abbreviation: "FREQ", meaning: "Frequency", category: "Kommunikation" },
+  { abbreviation: "HOLD", meaning: "Holding Pattern", category: "Navigation" },
+  { abbreviation: "INIT", meaning: "Initialization", category: "Flugplanung" },
+  { abbreviation: "LAT/LON", meaning: "Latitude/Longitude", category: "Navigation" },
+  { abbreviation: "PERF", meaning: "Performance", category: "Flugplanung" },
+  { abbreviation: "PROG", meaning: "Progress", category: "Navigation" },
+  { abbreviation: "RAD NAV", meaning: "Radio Navigation", category: "Navigation" },
+  { abbreviation: "RTE", meaning: "Route", category: "Navigation" },
+  { abbreviation: "SEC F-PLN", meaning: "Secondary Flight Plan", category: "Navigation" },
+  { abbreviation: "TMPY", meaning: "Temporary Flight Plan", category: "Navigation" },
+  { abbreviation: "WPT", meaning: "Waypoint", category: "Navigation" },
+  { abbreviation: "XTK", meaning: "Cross Track Error", category: "Navigation" },
+
+  // Additional Cockpit Systems and Indications
+  { abbreviation: "ACMS", meaning: "Aircraft Condition Monitoring System", category: "Flugzeugsysteme" },
+  { abbreviation: "ADR", meaning: "Air Data Reference", category: "Navigation" },
+  { abbreviation: "AFS", meaning: "Auto Flight System", category: "Flugsteuerung" },
+  { abbreviation: "AOA", meaning: "Angle of Attack", category: "Aerodynamik" },
+  { abbreviation: "APM", meaning: "Aircraft Performance Monitor", category: "Flugzeugsysteme" },
+  { abbreviation: "APU EGT", meaning: "APU Exhaust Gas Temperature", category: "Triebwerke" },
+  { abbreviation: "ARINC", meaning: "Aeronautical Radio, Incorporated", category: "Kommunikation" },
+  { abbreviation: "ATHR", meaning: "Autothrust", category: "Flugsteuerung" },
+  { abbreviation: "CFDIU", meaning: "Centralized Fault Display Interface Unit", category: "Flugzeugsysteme" },
+  { abbreviation: "DAR", meaning: "Digital AIDS Recorder", category: "Flugzeugsysteme" },
+  { abbreviation: "DDRMI", meaning: "Digital Distance and Radio Magnetic Indicator", category: "Navigation" },
+  { abbreviation: "DMC", meaning: "Display Management Computer", category: "Cockpit-Systeme" },
+  { abbreviation: "ECAM", meaning: "Electronic Centralized Aircraft Monitor", category: "Cockpit-Systeme" },
+  { abbreviation: "EFIS CP", meaning: "Electronic Flight Instrument System Control Panel", category: "Cockpit-Systeme" },
+  { abbreviation: "EIU", meaning: "Engine Interface Unit", category: "Triebwerke" },
+  { abbreviation: "FACS", meaning: "Flight Augmentation Computer System", category: "Flugsteuerung" },
+  { abbreviation: "FADEC", meaning: "Full Authority Digital Engine Control", category: "Triebwerke" },
+  { abbreviation: "FCU", meaning: "Flight Control Unit", category: "Flugsteuerung" },
+  { abbreviation: "FMS", meaning: "Flight Management System", category: "Navigation" },
+  { abbreviation: "FMGC", meaning: "Flight Management Guidance Computer", category: "Navigation" },
+  { abbreviation: "FWC", meaning: "Flight Warning Computer", category: "Sicherheitssysteme" },
+  { abbreviation: "GPWS", meaning: "Ground Proximity Warning System", category: "Sicherheitssysteme" },
+  { abbreviation: "IRS", meaning: "Inertial Reference System", category: "Navigation" },
+  { abbreviation: "ISIS", meaning: "Integrated Standby Instrument System", category: "Fluginstrumente" },
+  { abbreviation: "MCDU", meaning: "Multipurpose Control Display Unit", category: "Cockpit-Systeme" },
+  { abbreviation: "ND", meaning: "Navigation Display", category: "Cockpit-Systeme" },
+  { abbreviation: "NLG", meaning: "Nose Landing Gear", category: "Flugzeugsysteme" },
+  { abbreviation: "OANS", meaning: "On-board Airport Navigation System", category: "Navigation" },
+  { abbreviation: "PFD", meaning: "Primary Flight Display", category: "Cockpit-Systeme" },
+  { abbreviation: "PFCU", meaning: "Power Flight Control Unit", category: "Flugsteuerung" },
+  { abbreviation: "PSU", meaning: "Passenger Service Unit", category: "Flugzeugsysteme" },
+  { abbreviation: "RCDR", meaning: "Recorder", category: "Flugzeugsysteme" },
+  { abbreviation: "RDMI", meaning: "Radio Distance Magnetic Indicator", category: "Navigation" },
+  { abbreviation: "RMP", meaning: "Radio Management Panel", category: "Kommunikation" },
+  { abbreviation: "RVDT", meaning: "Rotary Variable Differential Transformer", category: "Flugzeugsysteme" },
+  { abbreviation: "SDAC", meaning: "System Data Acquisition Concentrator", category: "Flugzeugsysteme" },
+  { abbreviation: "SFCC", meaning: "Slat Flap Control Computer", category: "Flugsteuerung" },
+  { abbreviation: "SGU", meaning: "Symbol Generator Unit", category: "Cockpit-Systeme" },
+  { abbreviation: "SMM", meaning: "System Monitoring Module", category: "Flugzeugsysteme" },
+  { abbreviation: "THSA", meaning: "Trimmable Horizontal Stabilizer Actuator", category: "Flugsteuerung" },
+  { abbreviation: "TLU", meaning: "Travel Limitation Unit", category: "Flugsteuerung" },
+  { abbreviation: "WTB", meaning: "Weight on Wheels Transducer Box", category: "Flugzeugsysteme" },
+  { abbreviation: "WXR", meaning: "Weather Radar", category: "Meteorologie" }
+	
+	
+  { abbreviation: "ACARS", meaning: "Aircraft Communications Addressing and Reporting System", category: "Kommunikation" },
+  { abbreviation: "ACC", meaning: "Area Control Center", category: "Flugsicherung" },
+  { abbreviation: "ACM", meaning: "Air Cycle Machine", category: "Flugzeugsysteme" },
+  { abbreviation: "ADF", meaning: "Automatic Direction Finder", category: "Navigation" },
+  { abbreviation: "ADI", meaning: "Attitude Director Indicator", category: "Fluginstrumente" },
+  { abbreviation: "ADIRS", meaning: "Air Data Inertial Reference System", category: "Navigation" },
+  { abbreviation: "ADS", meaning: "Air Data System", category: "Flugzeugsysteme" },
+  { abbreviation: "ADS-B", meaning: "Automatic Dependent Surveillance-Broadcast", category: "Kommunikation" },
+  { abbreviation: "AFCS", meaning: "Automatic Flight Control System", category: "Flugsteuerung" },
+  { abbreviation: "AFM", meaning: "Aircraft Flight Manual", category: "Dokumentation" },
+  { abbreviation: "AGL", meaning: "Above Ground Level", category: "Navigation" },
+  { abbreviation: "AGPCS", meaning: "Auto Ground Proximity Callout System", category: "Sicherheitssysteme" },
+  { abbreviation: "AH", meaning: "Artificial Horizon", category: "Fluginstrumente" },
+  { abbreviation: "AHRS", meaning: "Attitude and Heading Reference System", category: "Navigation" },
+  { abbreviation: "ALS", meaning: "Approach Lighting System", category: "Flughafeninfrastruktur" },
+  { abbreviation: "ALT", meaning: "Altitude", category: "Navigation" },
+  { abbreviation: "ALTN", meaning: "Alternate", category: "Flugplanung" },
+  { abbreviation: "AOA", meaning: "Angle of Attack", category: "Aerodynamik" },
+  { abbreviation: "AP", meaning: "Autopilot", category: "Flugsteuerung" },
+  { abbreviation: "APB", meaning: "Auxiliary Power Breaker", category: "Elektrik" },
+  { abbreviation: "APU", meaning: "Auxiliary Power Unit", category: "Triebwerke" },
+  { abbreviation: "ARINC", meaning: "Aeronautical Radio, Incorporated", category: "Luftfahrtorganisationen" },
+  { abbreviation: "ASAP", meaning: "As Soon As Possible", category: "Allgemein" },
+  { abbreviation: "ASI", meaning: "Airspeed Indicator", category: "Fluginstrumente" },
+  { abbreviation: "ATIS", meaning: "Automatic Terminal Information Service", category: "Flugsicherung" },
+  { abbreviation: "ATC", meaning: "Air Traffic Control", category: "Flugsicherung" },
+  { abbreviation: "ATHR", meaning: "Autothrust", category: "Triebwerke" },
+  { abbreviation: "ATN", meaning: "Aeronautical Telecommunications Network", category: "Kommunikation" },
+  { abbreviation: "ATS", meaning: "Air Traffic Services", category: "Flugsicherung" },
+  { abbreviation: "AVNCS", meaning: "Avionics", category: "Flugzeugsysteme" },
+  { abbreviation: "BARO", meaning: "Barometric", category: "Meteorologie" },
+  { abbreviation: "BCAS", meaning: "Brake Control and Anti-Skid System", category: "Flugzeugsysteme" },
+  { abbreviation: "BLEED", meaning: "Bleed Air System", category: "Flugzeugsysteme" },
+  { abbreviation: "BRG", meaning: "Bearing", category: "Navigation" },
+  { abbreviation: "CAB PRESS", meaning: "Cabin Pressure", category: "Flugzeugsysteme" },
+  { abbreviation: "CAS", meaning: "Calibrated Airspeed", category: "Navigation" },
+  { abbreviation: "CAT", meaning: "Category (ILS)", category: "Navigation" },
+  { abbreviation: "CAVOK", meaning: "Ceiling and Visibility OK", category: "Meteorologie" },
+  { abbreviation: "CDA", meaning: "Continuous Descent Approach", category: "Flugverfahren" },
+  { abbreviation: "CDU", meaning: "Control Display Unit", category: "Cockpit-Systeme" },
+  { abbreviation: "CG", meaning: "Center of Gravity", category: "Flugphysik" },
+  { abbreviation: "CIDS", meaning: "Cabin Intercommunication Data System", category: "Kommunikation" },
+  { abbreviation: "CLB", meaning: "Climb", category: "Flugphasen" },
+  { abbreviation: "COND", meaning: "Conditioning", category: "Flugzeugsysteme" },
+  { abbreviation: "CONF", meaning: "Configuration", category: "Flugzeugkonfiguration" },
+  { abbreviation: "CRZ", meaning: "Cruise", category: "Flugphasen" },
+  { abbreviation: "CRT", meaning: "Cathode Ray Tube", category: "Avionik" },
+  { abbreviation: "CTR", meaning: "Center", category: "Flugsicherung" },
+  { abbreviation: "CVR", meaning: "Cockpit Voice Recorder", category: "Sicherheitssysteme" },
+  { abbreviation: "CWP", meaning: "Central Warning Panel", category: "Cockpit-Systeme" },
+  { abbreviation: "DCL", meaning: "Departure Clearance", category: "Flugsicherung" },
+  { abbreviation: "DECEL", meaning: "Deceleration", category: "Flugphysik" },
+  { abbreviation: "DFDR", meaning: "Digital Flight Data Recorder", category: "Sicherheitssysteme" },
+  { abbreviation: "DH", meaning: "Decision Height", category: "Navigation" },
+  { abbreviation: "DME", meaning: "Distance Measuring Equipment", category: "Navigation" },
+  { abbreviation: "DU", meaning: "Display Unit", category: "Cockpit-Systeme" },
+  { abbreviation: "ECAM", meaning: "Electronic Centralized Aircraft Monitor", category: "Cockpit-Systeme" },
+  { abbreviation: "EFCS", meaning: "Electronic Flight Control System", category: "Flugsteuerung" },
+  { abbreviation: "EFIS", meaning: "Electronic Flight Instrument System", category: "Cockpit-Systeme" },
+  { abbreviation: "EGT", meaning: "Exhaust Gas Temperature", category: "Triebwerke" },
+  { abbreviation: "EICAS", meaning: "Engine Indicating and Crew Alerting System", category: "Cockpit-Systeme" },
+  { abbreviation: "ELAC", meaning: "Elevator Aileron Computer", category: "Flugsteuerung" },
+  { abbreviation: "ELEC", meaning: "Electrical", category: "Elektrik" },
+  { abbreviation: "ENG", meaning: "Engine", category: "Triebwerke" },
+  { abbreviation: "EPR", meaning: "Engine Pressure Ratio", category: "Triebwerke" },
+  { abbreviation: "ETOPS", meaning: "Extended-range Twin-engine Operational Performance Standards", category: "Flugbetrieb" },
+  { abbreviation: "FAC", meaning: "Flight Augmentation Computer", category: "Flugsteuerung" },
+  { abbreviation: "FADEC", meaning: "Full Authority Digital Engine Control", category: "Triebwerke" },
+  { abbreviation: "FAF", meaning: "Final Approach Fix", category: "Navigation" },
+  { abbreviation: "FCDC", meaning: "Flight Control Data Concentrator", category: "Flugsteuerung" },
+  { abbreviation: "FCU", meaning: "Flight Control Unit", category: "Cockpit-Systeme" },
+  { abbreviation: "FD", meaning: "Flight Director", category: "Fluginstrumente" },
+  { abbreviation: "FDR", meaning: "Flight Data Recorder", category: "Sicherheitssysteme" },
+  { abbreviation: "FIR", meaning: "Flight Information Region", category: "Flugsicherung" },
+  { abbreviation: "FL", meaning: "Flight Level", category: "Navigation" },
+  { abbreviation: "FMGC", meaning: "Flight Management Guidance Computer", category: "Navigation" },
+  { abbreviation: "FMS", meaning: "Flight Management System", category: "Navigation" },
+  { abbreviation: "FMU", meaning: "Flight Management Unit", category: "Navigation" },
+  { abbreviation: "FPA", meaning: "Flight Path Angle", category: "Navigation" },
+  { abbreviation: "FPV", meaning: "Flight Path Vector", category: "Navigation" },
+  { abbreviation: "FSF", meaning: "Fuel System Fault", category: "Treibstoffsystem" },
+  { abbreviation: "FWC", meaning: "Flight Warning Computer", category: "Cockpit-Systeme" },
+  { abbreviation: "GLS", meaning: "GPS Landing System", category: "Navigation" },
+  { abbreviation: "GND", meaning: "Ground", category: "Allgemein" },
+  { abbreviation: "GPWS", meaning: "Ground Proximity Warning System", category: "Sicherheitssysteme" },
+  { abbreviation: "GS", meaning: "Glide Slope", category: "Navigation" },
+  { abbreviation: "HDG", meaning: "Heading", category: "Navigation" },
+  { abbreviation: "HF", meaning: "High Frequency", category: "Kommunikation" },
+  { abbreviation: "HSI", meaning: "Horizontal Situation Indicator", category: "Fluginstrumente" },
+  { abbreviation: "HUD", meaning: "Head-Up Display", category: "Cockpit-Systeme" },
+  { abbreviation: "HYD", meaning: "Hydraulic", category: "Flugzeugsysteme" },
+  { abbreviation: "IAF", meaning: "Initial Approach Fix", category: "Navigation" },
+  { abbreviation: "IAS", meaning: "Indicated Airspeed", category: "Navigation" },
+  { abbreviation: "ICAO", meaning: "International Civil Aviation Organization", category: "Luftfahrtorganisationen" },
+  { abbreviation: "ILS", meaning: "Instrument Landing System", category: "Navigation" },
+  { abbreviation: "IMC", meaning: "Instrument Meteorological Conditions", category: "Meteorologie" },
+  { abbreviation: "INOP", meaning: "Inoperative", category: "Allgemein" },
+  { abbreviation: "INS", meaning: "Inertial Navigation System", category: "Navigation" },
+  { abbreviation: "ISA", meaning: "International Standard Atmosphere", category: "Meteorologie" },
+  { abbreviation: "IRS", meaning: "Inertial Reference System", category: "Navigation" },
+  { abbreviation: "KIAS", meaning: "Knots Indicated Airspeed", category: "Navigation" },
+  { abbreviation: "LDA", meaning: "Landing Distance Available", category: "Flughafeninfrastruktur" },
+  { abbreviation: "LDG", meaning: "Landing", category: "Flugphasen" },
+  { abbreviation: "LNAV", meaning: "Lateral Navigation", category: "Navigation" },
+  { abbreviation: "LOC", meaning: "Localizer", category: "Navigation" },
+  { abbreviation: "LVL CHG", meaning: "Level Change", category: "Flugsteuerung" },
+  { abbreviation: "MAC", meaning: "Mean Aerodynamic Chord", category: "Aerodynamik" },
+  { abbreviation: "MCDU", meaning: "Multipurpose Control Display Unit", category: "Cockpit-Systeme" },
+  { abbreviation: "MCP", meaning: "Mode Control Panel", category: "Cockpit-Systeme" },
+  { abbreviation: "MEA", meaning: "Minimum Enroute Altitude", category: "Navigation" },
+  { abbreviation: "MEL", meaning: "Minimum Equipment List", category: "Flugbetrieb" },
+  { abbreviation: "METAR", meaning: "Meteorological Aerodrome Report", category: "Meteorologie" },
+  { abbreviation: "MMEL", meaning: "Master Minimum Equipment List", category: "Flugbetrieb" },
+  { abbreviation: "MMO", meaning: "Maximum Operating Mach Number", category: "Flugphysik" },
+  { abbreviation: "MSA", meaning: "Minimum Safe Altitude", category: "Navigation" },
+  { abbreviation: "N1", meaning: "Engine Fan Speed", category: "Triebwerke" },
+  { abbreviation: "NADP", meaning: "Noise Abatement Departure Procedure", category: "Flugverfahren" },
+  { abbreviation: "NDB", meaning: "Non-Directional Beacon", category: "Navigation" },
+  { abbreviation: "ND", meaning: "Navigation Display", category: "Cockpit-Systeme" },
+  { abbreviation: "NM", meaning: "Nautical Mile", category: "Navigation" },
+  { abbreviation: "NOTAM", meaning: "Notice to Airmen", category: "Flugbetrieb" },
+  { abbreviation: "NPA", meaning: "Non-Precision Approach", category: "Navigation" },
+  { abbreviation: "NTSB", meaning: "National Transportation Safety Board", category: "Luftfahrtorganisationen" },
+  { abbreviation: "OAT", meaning: "Outside Air Temperature", category: "Meteorologie" },
+  { abbreviation: "OEI", meaning: "One Engine Inoperative", category: "Triebwerke" },
+  { abbreviation: "OM", meaning: "Outer Marker", category: "Navigation" },
+  { abbreviation: "OPS", meaning: "Operations", category: "Flugbetrieb" },
+  { abbreviation: "PAPI", meaning: "Precision Approach Path Indicator", category: "Navigation" },
+  { abbreviation: "PAX", meaning: "Passengers", category: "Flugbetrieb" },
+  { abbreviation: "PBN", meaning: "Performance Based Navigation", category: "Navigation" },
+  { abbreviation: "PF", meaning: "Pilot Flying", category: "Cockpit-Verfahren" },
+  { abbreviation: "PFD", meaning: "Primary Flight Display", category: "Cockpit-Systeme" },
+  { abbreviation: "PM", meaning: "Pilot Monitoring", category: "Cockpit-Verfahren" },
+  { abbreviation: "PNF", meaning: "Pilot Not Flying", category: "Cockpit-Verfahren" },
+  { abbreviation: "POB", meaning: "Persons On Board", category: "Flugbetrieb" },
+  { abbreviation: "PROC", meaning: "Procedure", category: "Flugverfahren" },
+  { abbreviation: "PTT", meaning: "Push-To-Talk", category: "Kommunikation" },
+  { abbreviation: "QFE", meaning: "Field Elevation Pressure", category: "Meteorologie" },
+  { abbreviation: "QNH", meaning: "Barometric Pressure Adjusted to Sea Level", category: "Meteorologie" },
+  { abbreviation: "RA", meaning: "Radio Altimeter", category: "Fluginstrumente" },
+  { abbreviation: "RAAS", meaning: "Runway Awareness and Advisory System", category: "Sicherheitssysteme" },
+  { abbreviation: "RAT", meaning: "Ram Air Turbine", category: "Flugzeugsysteme" },
+  { abbreviation: "RMI", meaning: "Radio Magnetic Indicator", category: "Fluginstrumente" },
+  { abbreviation: "RNAV", meaning: "Area Navigation", category: "Navigation" },
+  { abbreviation: "RNP", meaning: "Required Navigation Performance", category: "Navigation" },
+  { abbreviation: "RTO", meaning: "Rejected Take-Off", category: "Flugverfahren" },
+  { abbreviation: "RVR", meaning: "Runway Visual Range", category: "Meteorologie" },
+  { abbreviation: "RWY", meaning: "Runway", category: "Flughafeninfrastruktur" },
+  { abbreviation: "SID", meaning: "Standard Instrument Departure", category: "Navigation" },
+  { abbreviation: "SIGMET", meaning: "Significant Meteorological Information", category: "Meteorologie" },
+  { abbreviation: "SOP", meaning: "Standard Operating Procedure", category: "Flugbetrieb" },
+  { abbreviation: "SPD", meaning: "Speed", category: "Navigation" },
+  { abbreviation: "STAR", meaning: "Standard Terminal Arrival Route", category: "Navigation" },
+  { abbreviation: "STS", meaning: "Status", category: "Allgemein" },
+  { abbreviation: "TA", meaning: "Traffic Advisory", category: "Sicherheitssysteme" },
+  { abbreviation: "TAF", meaning: "Terminal Aerodrome Forecast", category: "Meteorologie" },
+  { abbreviation: "TAS", meaning: "True Airspeed", category: "Navigation" },
+  { abbreviation: "TCAS", meaning: "Traffic Collision Avoidance System", category: "Sicherheitssysteme" },
+  { abbreviation: "THS", meaning: "Trimmable Horizontal Stabilizer", category: "Flugsteuerung" },
+  { abbreviation: "TLA", meaning: "Thrust Lever Angle", category: "Triebwerke" },
+  { abbreviation: "TMR", meaning: "Timer", category: "Cockpit-Systeme" },
+  { abbreviation: "TO", meaning: "Take-Off", category: "Flugphasen" },
+  { abbreviation: "TOC", meaning: "Top of Climb", category: "Flugphasen" },
+  { abbreviation: "TOD", meaning: "Top of Descent", category: "Flugphasen" },
+  { abbreviation: "TOGA", meaning: "Take-Off/Go-Around", category: "Flugverfahren" },
+  { abbreviation: "TRK", meaning: "Track", category: "Navigation" },
+  { abbreviation: "TWY", meaning: "Taxiway", category: "Flughafeninfrastruktur" },
+  { abbreviation: "UTC", meaning: "Coordinated Universal Time", category: "Allgemein" },
+  { abbreviation: "V/S", meaning: "Vertical Speed", category: "Navigation" },
+  { abbreviation: "V1", meaning: "Decision Speed", category: "Flugverfahren" },
+  { abbreviation: "V2", meaning: "Takeoff Safety Speed", category: "Flugverfahren" },
+  { abbreviation: "VA", meaning: "Design Maneuvering Speed", category: "Flugphysik" },
+  { abbreviation: "VAPP", meaning: "Approach Speed", category: "Flugverfahren" },
+  { abbreviation: "VFE", meaning: "Maximum Flap Extended Speed", category: "Flugphysik" },
+  { abbreviation: "VFR", meaning: "Visual Flight Rules", category: "Flugbetrieb" },
+  { abbreviation: "VHF", meaning: "Very High Frequency", category: "Kommunikation" },
+  { abbreviation: "VLE", meaning: "Maximum Landing Gear Extended Speed", category: "Flugphysik" },
+  { abbreviation: "VMC", meaning: "Visual Meteorological Conditions", category: "Meteorologie" },
+  { abbreviation: "VMO", meaning: "Maximum Operating Speed", category: "Flugphysik" },
+  { abbreviation: "VNAV", meaning: "Vertical Navigation", category: "Navigation" },
+  { abbreviation: "VOR", meaning: "VHF Omnidirectional Range", category: "Navigation" },
+  { abbreviation: "VR", meaning: "Rotation Speed", category: "Flugverfahren" },
+  { abbreviation: "VSI", meaning: "Vertical Speed Indicator", category: "Fluginstrumente" },
+  { abbreviation: "VTOL", meaning: "Vertical Take-Off and Landing", category: "Flugverfahren" },
+  { abbreviation: "WPT", meaning: "Waypoint", category: "Navigation" },
+  { abbreviation: "WX", meaning: "Weather", category: "Meteorologie" },
+  { abbreviation: "XPDR", meaning: "Transponder", category: "Kommunikation" },
+  { abbreviation: "YD", meaning: "Yaw Damper", category: "Flugsteuerung" },
+  { abbreviation: "ZFW", meaning: "Zero Fuel Weight", category: "Flugphysik" }
+];
+		
+// Funktion zum Laden der Karten aus dem localStorage oder Initialisieren, wenn nicht vorhanden
+function loadFlashcards() {
+    const storedCards = localStorage.getItem('flashcards');
+    if (storedCards) {
+        return JSON.parse(storedCards);
+    } else {
+        const newCards = aviationAbbreviations.map(item => 
+            createFlashcard(item.abbreviation, item.meaning, item.category)
+        );
+        saveFlashcards(newCards);
+        return newCards;
+    }
+}
+
+// Funktion zum Speichern der Karten im localStorage
+function saveFlashcards(flashcards) {
+    localStorage.setItem('flashcards', JSON.stringify(flashcards));
+}
+
+// Modifizierte createFlashcard Funktion
+function createFlashcard(abbreviation, meaning, category) {
+    return {
+        front: abbreviation,
+        back: `${meaning}`,
+        category: category,
+        lastReviewed: null,
+        interval: 1,
+        easeFactor: 2.5,
+        correctCount: 0,
+        incorrectCount: 0,
+    };
+}
+
+// Modifizierte updateFlashcard Funktion
+function updateFlashcard(flashcard, performance) {
+    const today = new Date();
+    if (performance === 'correct') {
+        flashcard.interval = Math.round(flashcard.interval * flashcard.easeFactor);
+        flashcard.easeFactor += 0.1;
+        flashcard.correctCount++;
+    } else if (performance === 'incorrect') {
+        flashcard.interval = 1;
+        flashcard.easeFactor = Math.max(1.3, flashcard.easeFactor - 0.2);
+        flashcard.incorrectCount++;
+    }
+    flashcard.lastReviewed = today.toISOString();
+    return flashcard;
+}
+
+// Modifizierte getCardsForReview Funktion
+function getCardsForReview(deck, limit = 20) {
+    const today = new Date();
+    return shuffleArray(deck
+        .filter(card => {
+            if (!card.lastReviewed) return true;
+            const daysSinceLastReview = (today - new Date(card.lastReviewed)) / (1000 * 60 * 60 * 24);
+            return daysSinceLastReview >= card.interval || card.incorrectCount > card.correctCount;
+        })
+    ).slice(0, limit);
+}
+
+// Modifizierte startSession Funktion
+function startSession() {
+    const category = document.getElementById('category').value;
+    const allCards = loadFlashcards();
+    currentDeck = filterCardsByCategory(allCards, category);
+    currentDeck = getCardsForReview(currentDeck);
+    if (currentDeck.length > 0) {
+        currentCard = currentDeck.shift();
+        showCard(currentCard);
+        document.querySelector('.main-screen').style.display = 'none';
+        document.querySelector('.learning-screen').style.display = 'flex';
+        document.querySelector('.topnav').style.display = 'flex';
+    } else {
+        alert('Keine Karten zum Wiederholen in dieser Kategorie.');
+    }
+}
+
+// Modifizierte Event Listener für 'correct' und 'incorrect' Buttons
+document.getElementById('correct').addEventListener('click', () => {
+    const updatedCard = updateFlashcard(currentCard, 'correct');
+    const allCards = loadFlashcards();
+    const cardIndex = allCards.findIndex(card => card.front === updatedCard.front);
+    allCards[cardIndex] = updatedCard;
+    saveFlashcards(allCards);
+    
+    if (currentDeck.length > 0) {
+        currentCard = currentDeck.shift();
+        showCard(currentCard);
+    } else {
+        alert('Lernsitzung beendet!');
+        exitLearningMode();
+    }
+});
+
+document.getElementById('incorrect').addEventListener('click', () => {
+    const updatedCard = updateFlashcard(currentCard, 'incorrect');
+    const allCards = loadFlashcards();
+    const cardIndex = allCards.findIndex(card => card.front === updatedCard.front);
+    allCards[cardIndex] = updatedCard;
+    saveFlashcards(allCards);
+    
+    if (currentDeck.length > 0) {
+        currentCard = currentDeck.shift();
+        showCard(currentCard);
+    } else {
+        alert('Lernsitzung beendet!');
+        exitLearningMode();
+    }
+});
+
+// Initialisierung
+let flashcardDeck = loadFlashcards();
+let currentCard;
+let currentDeck;
+
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+
+        function getCardsForReview(deck, limit = 20) {
+            const today = new Date();
+            return shuffleArray(deck
+                .filter(card => !card.lastReviewed || 
+                    (today - card.lastReviewed) / (1000 * 60 * 60 * 24) >= card.interval)
+            ).slice(0, limit);
+        }
+
+        function filterCardsByCategory(deck, category) {
+            return category === 'Alle' ? deck : deck.filter(card => card.category === category);
+        }
+
+        function showCard(card) {
+            document.getElementById('flashcard').innerHTML = `
+                <div>${card.front}</div>
+            `;
+            document.getElementById('showAnswer').style.display = 'block';
+            document.getElementById('performance').style.display = 'none';
+        }
+
+        function showAnswer(card) {
+            document.getElementById('flashcard').innerHTML = `
+                <div>${card.front}</div>
+                <div>${card.back}</div>
+                <div class="category">${card.category}</div>
+            `;
+            document.getElementById('showAnswer').style.display = 'none';
+            document.getElementById('performance').style.display = 'flex';
+        }
+
+   
+        function exitLearningMode() {
+            document.querySelector('.main-screen').style.display = 'flex';
+            document.querySelector('.learning-screen').style.display = 'none';
+            document.querySelector('.topnav').style.display = 'none';
+        }
+
+        document.getElementById('startSession').addEventListener('click', startSession);
+
+        document.getElementById('showAnswer').addEventListener('click', () => showAnswer(currentCard));
+
+      
+
+        // Kategorien für das Dropdown-Menü erstellen
+        const categories = ['Alle', ...new Set(aviationAbbreviations.map(item => item.category))];
+        const categorySelect = document.getElementById('category');
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    </script>
+</body>
+</html>
