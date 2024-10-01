@@ -19,10 +19,10 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
             line-height: 1.6;
             margin: 0;
-            padding: 20px;
+            padding: 20px 10px;
             background-color: var(--bg-color);
             color: var(--text-color);
-            min-height: calc( 100vh - 80px );
+            min-height: calc( 100vh - 60px );
             display: flex;
             flex-direction: column;
             -webkit-user-select: none;
@@ -134,13 +134,14 @@
         <div class="topnav">
             <span class="chevron-left" onclick="exitLearningMode()">&#8249;</span>
         </div>
-        <div class="main-screen" style="display:flex;justify-content:center;height:80vh">
+        <div class="main-screen" style="display:flex;justify-content:center;height:85vh;padding-top:7vh;">
 			<img src=a330.png style="margin:3em;max-width:80%">
             <h1>A330 Abkürzungen</h1>
             <div id="categoryFilter">
                 <select id="category"></select>
             </div>
             <button id="startSession">Lernsitzung starten</button>
+			<div style=flex:1></div><div style="opacity:.5;text-align:center">v1.0.1</div>
         </div>
         <div class="learning-screen">
             <div id="flashcard"></div>
@@ -264,7 +265,7 @@ const aviationAbbreviations = [
   { abbreviation: "THSA", meaning: "Trimmable Horizontal Stabilizer Actuator", category: "Flugsteuerung" },
   { abbreviation: "TLU", meaning: "Travel Limitation Unit", category: "Flugsteuerung" },
   { abbreviation: "WTB", meaning: "Weight on Wheels Transducer Box", category: "Flugzeugsysteme" },
-  { abbreviation: "WXR", meaning: "Weather Radar", category: "Meteorologie" }
+  { abbreviation: "WXR", meaning: "Weather Radar", category: "Meteorologie" },
 	
 	
   { abbreviation: "ACARS", meaning: "Aircraft Communications Addressing and Reporting System", category: "Kommunikation" },
@@ -458,12 +459,14 @@ const aviationAbbreviations = [
   { abbreviation: "ZFW", meaning: "Zero Fuel Weight", category: "Flugphysik" }
 ];
 		
-// Funktion zum Laden der Karten aus dem localStorage oder Initialisieren, wenn nicht vorhanden
+let flashcardDeck = [];
+		// Funktion zum Laden der Karten aus dem localStorage
 function loadFlashcards() {
     const storedCards = localStorage.getItem('flashcards');
     if (storedCards) {
         return JSON.parse(storedCards);
     } else {
+        // Wenn keine Karten gespeichert sind, initialisieren wir sie aus aviationAbbreviations
         const newCards = aviationAbbreviations.map(item => 
             createFlashcard(item.abbreviation, item.meaning, item.category)
         );
@@ -475,20 +478,6 @@ function loadFlashcards() {
 // Funktion zum Speichern der Karten im localStorage
 function saveFlashcards(flashcards) {
     localStorage.setItem('flashcards', JSON.stringify(flashcards));
-}
-
-// Modifizierte createFlashcard Funktion
-function createFlashcard(abbreviation, meaning, category) {
-    return {
-        front: abbreviation,
-        back: `${meaning}`,
-        category: category,
-        lastReviewed: null,
-        interval: 1,
-        easeFactor: 2.5,
-        correctCount: 0,
-        incorrectCount: 0,
-    };
 }
 
 // Modifizierte updateFlashcard Funktion
@@ -506,6 +495,20 @@ function updateFlashcard(flashcard, performance) {
     flashcard.lastReviewed = today.toISOString();
     return flashcard;
 }
+// Modifizierte createFlashcard Funktion
+function createFlashcard(abbreviation, meaning, category) {
+    return {
+        front: abbreviation,
+        back: `${meaning}`,
+        category: category,
+        lastReviewed: null,
+        interval: 1,
+        easeFactor: 2.5,
+        correctCount: 0,
+        incorrectCount: 0,
+    };
+}
+
 
 // Modifizierte getCardsForReview Funktion
 function getCardsForReview(deck, limit = 20) {
@@ -522,9 +525,8 @@ function getCardsForReview(deck, limit = 20) {
 // Modifizierte startSession Funktion
 function startSession() {
     const category = document.getElementById('category').value;
-    const allCards = loadFlashcards();
-    currentDeck = filterCardsByCategory(allCards, category);
-    currentDeck = getCardsForReview(currentDeck);
+    let allCards = loadFlashcards();
+    currentDeck = getCardsForReview(allCards, category);
     if (currentDeck.length > 0) {
         currentCard = currentDeck.shift();
         showCard(currentCard);
@@ -536,13 +538,16 @@ function startSession() {
     }
 }
 
-// Modifizierte Event Listener für 'correct' und 'incorrect' Buttons
+
+// Event Listener für 'correct' und 'incorrect' Buttons
 document.getElementById('correct').addEventListener('click', () => {
+    let allCards = loadFlashcards();
     const updatedCard = updateFlashcard(currentCard, 'correct');
-    const allCards = loadFlashcards();
     const cardIndex = allCards.findIndex(card => card.front === updatedCard.front);
-    allCards[cardIndex] = updatedCard;
-    saveFlashcards(allCards);
+    if (cardIndex !== -1) {
+        allCards[cardIndex] = updatedCard;
+        saveFlashcards(allCards);
+    }
     
     if (currentDeck.length > 0) {
         currentCard = currentDeck.shift();
@@ -554,11 +559,13 @@ document.getElementById('correct').addEventListener('click', () => {
 });
 
 document.getElementById('incorrect').addEventListener('click', () => {
+    let allCards = loadFlashcards();
     const updatedCard = updateFlashcard(currentCard, 'incorrect');
-    const allCards = loadFlashcards();
     const cardIndex = allCards.findIndex(card => card.front === updatedCard.front);
-    allCards[cardIndex] = updatedCard;
-    saveFlashcards(allCards);
+    if (cardIndex !== -1) {
+        allCards[cardIndex] = updatedCard;
+        saveFlashcards(allCards);
+    }
     
     if (currentDeck.length > 0) {
         currentCard = currentDeck.shift();
@@ -570,7 +577,6 @@ document.getElementById('incorrect').addEventListener('click', () => {
 });
 
 // Initialisierung
-let flashcardDeck = loadFlashcards();
 let currentCard;
 let currentDeck;
 
@@ -583,15 +589,19 @@ let currentDeck;
             return array;
         }
 
-
-        function getCardsForReview(deck, limit = 20) {
-            const today = new Date();
-            return shuffleArray(deck
-                .filter(card => !card.lastReviewed || 
-                    (today - card.lastReviewed) / (1000 * 60 * 60 * 24) >= card.interval)
-            ).slice(0, limit);
-        }
-
+// Modifizierte getCardsForReview Funktion
+function getCardsForReview(deck, category, limit = 20) {
+    const today = new Date();
+    return shuffleArray(deck
+        .filter(card => {
+            const isCorrectCategory = category === 'Alle' || card.category === category;
+            const needsReview = !card.lastReviewed ||
+                (today - new Date(card.lastReviewed)) / (1000 * 60 * 60 * 24) >= card.interval ||
+                card.incorrectCount > card.correctCount;
+            return isCorrectCategory && needsReview;
+        })
+    ).slice(0, limit);
+}
         function filterCardsByCategory(deck, category) {
             return category === 'Alle' ? deck : deck.filter(card => card.category === category);
         }
